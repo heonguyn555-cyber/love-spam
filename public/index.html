@@ -342,7 +342,7 @@
     <div class="block">
         <div class="intro" id="intro">
             <div class="introBox">
-                <h1>Hello~~</h1>
+                <h1>Xin chào tình iuu</h1>
                 <input
                     type="text"
                     id="nameInput"
@@ -416,6 +416,7 @@
     </div>
 
 </body>
+<script src="/socket.io/socket.io.js"></script>
 
 <script>
     let leftScore = 0;
@@ -448,7 +449,38 @@
     const messages = [];
 
     const input = document.getElementById("inputMessage");
+
     let username = "Unknown";
+
+
+    // tạo id riêng cho máy
+    let clientId =
+        localStorage.getItem("clientId");
+
+    if(!clientId){
+
+        clientId =
+            Math.random()
+                .toString(36)
+                .substring(2)
+            + Date.now();
+
+        localStorage.setItem(
+            "clientId",
+            clientId
+        );
+
+    }
+
+
+    // connect socket
+    const socket = io({
+
+        query:{
+            clientId
+        }
+
+    });
     let isHyperOwner = false;
 
     const intro = document.getElementById("intro");
@@ -462,10 +494,8 @@
         document.querySelector("button[name='likeyou']");
 
     likeButton.addEventListener("click",()=>{
-        rightScore += 1;
 
-        // update tim
-        updateHeart();
+        socket.emit("like",clientId);
 
     });
 
@@ -478,6 +508,11 @@
             startBtn.click();
 
         }
+
+    });
+    socket.on("receiveMessage",(data)=>{
+
+        addMessage(data);
 
     });
 
@@ -519,7 +554,11 @@
 
             if(text !== ""){
 
-                addMessage("["+ username +"]: " + text);
+                socket.emit("sendMessage",{
+                    username,
+                    text,
+                    isHyperOwner
+                });
 
                 input.value = "";
 
@@ -563,28 +602,26 @@
 
     }
 
-    function addMessage(text){
+    function addMessage(data){
 
         const msg = document.createElement("div");
 
         msg.className = "msg";
 
-        const pureText =
-            text.replace(`[${username}]: `,"");
-
-        if(isHyperOwner){
+        if(data.isHyperOwner){
 
             msg.innerHTML =
                 `<span style="
                     color:red;
                     font-weight:bold;
                 ">
-                    [${username}]
-                </span>: ${pureText}`;
+                    [${data.username}]
+                </span>: ${data.text}`;
 
         }else{
 
-            msg.innerText = text;
+            msg.innerText =
+                `[${data.username}]: ${data.text}`;
 
         }
 
@@ -625,6 +662,15 @@
     }
     updateHeart();
 
-</script>
+    socket.on("updateHearts",(data)=>{
 
+        leftScore = data.left;
+
+        rightScore = data.right;
+
+        updateHeart();
+
+    });
+
+</script>
 </html>
